@@ -313,37 +313,26 @@ namespace Omni
 
             Log.Info(TAG, "Starting the real work.");
 
-            sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Accelerometer), SensorDelay.Normal);
-            sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Gyroscope), SensorDelay.Normal);
+            // Idempotent: called on every rebind, so only start what isn't already running.
 
-            IsStarted = true;
+            var firstStart = !IsStarted;
+            if (firstStart)
+            {
+                sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Accelerometer), SensorDelay.Normal);
+                sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Gyroscope), SensorDelay.Normal);
+                IsStarted = true;
+            }
             if (!simulation)
             {
-                if (locationListener != null)
-                {
-                    if (locationListener.IsStarted) locationListener.Stop();
-                    if (PermissionsHelper.CheckPermissions(PermissionsHelper.LocationPermissions)) locationListener.Start();
-                }
-                if (bluetoothListener != null)
-                {
-                    if (bluetoothListener.IsStarted) bluetoothListener.Stop();
-                    if (PermissionsHelper.CheckPermissions(PermissionsHelper.BluetoothPermissions)) bluetoothListener.Start();
-                }
+                if (locationListener != null && !locationListener.IsStarted && PermissionsHelper.CheckPermissions(PermissionsHelper.LocationPermissions)) locationListener.Start();
+                if (bluetoothListener != null && !bluetoothListener.IsStarted && PermissionsHelper.CheckPermissions(PermissionsHelper.BluetoothPermissions)) bluetoothListener.Start();
             }
-            else
+            else if (firstStart)
             {
                 simulationProvider?.Start();
             }
-            if (loggingSender != null)
-            {
-                if (loggingSender.IsStarted) loggingSender.Stop();
-                loggingSender.Start();
-            }
-            if (uploadSender != null)
-            {
-                if (uploadSender.IsStarted) uploadSender.Stop();
-                uploadSender.Start();
-            }
+            if (loggingSender != null && !loggingSender.IsStarted) loggingSender.Start();
+            if (uploadSender != null && !uploadSender.IsStarted) uploadSender.Start();
         }
 
         public void Stop()

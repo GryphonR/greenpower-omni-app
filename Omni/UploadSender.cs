@@ -69,6 +69,7 @@ namespace Omni
 
         public void Start()
         {
+            if (IsStarted) return;
             Log.Info(TAG, "Upload sender start.");
             IsStarted = true;
 

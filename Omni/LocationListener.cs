@@ -128,6 +128,7 @@ namespace Omni
 
 		public void Start()
 		{
+			if (IsStarted) return;
 			Log.Info(TAG, "Starting location listener, requesting location updates.");
 			IsStarted = true;
 
