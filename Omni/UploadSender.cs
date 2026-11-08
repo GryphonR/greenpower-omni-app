@@ -377,6 +377,10 @@ namespace Omni
                     }
                 }
             }
+            catch (System.Exception ex)                     // async void timer caller: an escaped exception here would kill the process
+            {
+                Log.Info(TAG, "Upload telemetry data exception building request: " + ex.Message);
+            }
             finally
             {
                 uploadGate.Release();                       // release semaphore once upload request is complete
