@@ -118,7 +118,7 @@ namespace Omni
                 password = EncryptedPreferenceHelper.DataStore?.GetString(Resources?.GetString(Resource.String.preference_key_upload_user_defined_password), string.Empty);
             }
 
-            httpClient ??= new HttpClient();
+            httpClient ??= new HttpClient { Timeout = TimeSpan.FromSeconds(5) };    // short timeout so a slow server can't hold the upload gate for the 100s default
 
             // set the timer going
 
@@ -132,18 +132,7 @@ namespace Omni
             timer.Stop();
 
             IsStarted = false;
-
-            uploadGate.Wait();
-
-            try
-            {
-                httpClient?.Dispose();
-            }
-            finally
-            {
-                httpClient = null;
-                uploadGate.Release();
-            }
+            // httpClient is kept (not disposed) so Stop never blocks on an in-flight upload; Start reuses it
         }
 
         public async Task UploadNowAsync()
