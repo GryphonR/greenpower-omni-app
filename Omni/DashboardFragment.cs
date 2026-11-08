@@ -229,9 +229,9 @@ namespace Omni
             {
                 previousState = currentState;
 
-                if (Activity != null)
+                Activity?.RunOnUiThread(() =>               // views and Resources must only be touched on the UI thread, and only while attached
                 {
-                    var activityMainView = Activity.FindViewById(Resource.Id.activity_main);
+                    var activityMainView = IsAdded ? Activity?.FindViewById(Resource.Id.activity_main) : null;
                     if (activityMainView != null)
                     {
                         switch (currentState)
@@ -254,8 +254,7 @@ namespace Omni
                                 break;
                         }
                     }
-                }
-
+                });
             }
         }
 
