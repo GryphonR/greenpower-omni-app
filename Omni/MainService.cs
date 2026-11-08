@@ -101,12 +101,8 @@ namespace Omni
 
             simulation = intent.GetBooleanExtra(Constants.SIMULATION_NAME, false);
 
-            if (IsForegroundStarted)
-            {
-                Log.Info(TAG, "Foreground service already running");
-                return StartCommandResult.NotSticky;
-            }
-
+            // Runs again if already in the foreground: StartForeground is safe to repeat, picks up service types for permissions
+            // granted since the first call, and Start() below is idempotent so it starts any listener that couldn't start before.
             Log.Info(TAG, "Starting foreground service.");
 
             // Allow foreground service to be started whether or not have all the necessary permissions to allow simulation.
@@ -134,7 +130,7 @@ namespace Omni
             }
             catch (Exception ex)
             {
-                Log.Info(TAG, "Exception starting in foreground" + ex.Message != null ? ": " + ex.Message : "");
+                Log.Info(TAG, $"Exception starting in foreground: {ex.Message}");
             }
 
             if (IsForegroundStarted) Start();
@@ -313,37 +309,26 @@ namespace Omni
 
             Log.Info(TAG, "Starting the real work.");
 
-            sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Accelerometer), SensorDelay.Normal);
-            sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Gyroscope), SensorDelay.Normal);
+            // Idempotent: called on every rebind, so only start what isn't already running.
 
-            IsStarted = true;
+            var firstStart = !IsStarted;
+            if (firstStart)
+            {
+                sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Accelerometer), SensorDelay.Normal);
+                sensorManager?.RegisterListener(this, sensorManager.GetDefaultSensor(SensorType.Gyroscope), SensorDelay.Normal);
+                IsStarted = true;
+            }
             if (!simulation)
             {
-                if (locationListener != null)
-                {
-                    if (locationListener.IsStarted) locationListener.Stop();
-                    if (PermissionsHelper.CheckPermissions(PermissionsHelper.LocationPermissions)) locationListener.Start();
-                }
-                if (bluetoothListener != null)
-                {
-                    if (bluetoothListener.IsStarted) bluetoothListener.Stop();
-                    if (PermissionsHelper.CheckPermissions(PermissionsHelper.BluetoothPermissions)) bluetoothListener.Start();
-                }
+                if (locationListener != null && !locationListener.IsStarted && PermissionsHelper.CheckPermissions(PermissionsHelper.LocationPermissions)) locationListener.Start();
+                if (bluetoothListener != null && !bluetoothListener.IsStarted && PermissionsHelper.CheckPermissions(PermissionsHelper.BluetoothPermissions)) bluetoothListener.Start();
             }
-            else
+            else if (firstStart)
             {
                 simulationProvider?.Start();
             }
-            if (loggingSender != null)
-            {
-                if (loggingSender.IsStarted) loggingSender.Stop();
-                loggingSender.Start();
-            }
-            if (uploadSender != null)
-            {
-                if (uploadSender.IsStarted) uploadSender.Stop();
-                uploadSender.Start();
-            }
+            if (loggingSender != null && !loggingSender.IsStarted) loggingSender.Start();
+            if (uploadSender != null && !uploadSender.IsStarted) uploadSender.Start();
         }
 
         public void Stop()
@@ -555,7 +540,7 @@ namespace Omni
                     keys.Add(Constants.SHARED_DATA_LAP_KEY);
                     if (lap != PreviousLap)                 // Force an immediate upload of data with timestamp of when lap incremented
                     {                                       // rather than wait for the next timed upload of data
-                        uploadSender?.UploadNowAsync();     // Conciously not awaiting the upload to complete
+                        _ = uploadSender?.UploadNowAsync(JavaSystem.CurrentTimeMillis());     // Conciously not awaiting the upload to complete
                         PreviousLap = lap;
                     }
                 }
@@ -593,6 +578,7 @@ namespace Omni
         {
             lapCounter.ResetLapNumber();
             var lap = lapCounter.PositionUpdate(null);
+            PreviousLap = lap;                      // so the reset itself doesn't trigger a lap upload
             Shared.Data.PutInt(Constants.SHARED_DATA_LAP_KEY, lap);
             this.ServiceBinder.DataAvailable([Constants.SHARED_DATA_LAP_KEY]);
         }
@@ -606,6 +592,7 @@ namespace Omni
                 case State.WaitingForThrottleOrCurrent:
                     lapCounter.Reset();
                     var lap = lapCounter.PositionUpdate(null);
+                    PreviousLap = lap;
                     Shared.Data.PutInt(Constants.SHARED_DATA_LAP_KEY, lap);
                     lapCounter.AcquireStartLocation();
                     break;

@@ -42,8 +42,7 @@ namespace Omni
         {
             Log.Info(TAG, "Starting bluetooth listener");
 
-            if (!BluetoothHelper.CheckBluetooth(Service)) return;           // return if bluetooth not enabled (should have been enabled in main activity)
-            if (IsStarted) return;                                          // return if already started
+            if (IsStarted) return;                                         // return if already started
 
             var Resources = Service.Resources;
             if (Resources is null) return;
@@ -229,6 +228,8 @@ namespace Omni
                 receivedCount = await socket.InputStream.ReadAsync(eChookBuffer.ReceivedBytes, eChookBuffer.Offset, 
                                                                    eChookBuffer.ReceivedBytes.Length - eChookBuffer.Offset, cts.Token);
 
+                if (receivedCount <= 0) return null;        // end of stream, caller closes the socket and reconnects
+
                 eChookBuffer.BytesLeft = eChookBuffer.Offset + receivedCount;
 
                 var done = cts.IsCancellationRequested;
@@ -238,7 +239,7 @@ namespace Omni
                     while ((ix < eChookBuffer.BytesLeft) && (eChookBuffer.ReceivedBytes[ix] != '{')) ix++;
                     if (ix >= eChookBuffer.BytesLeft)
                     {
-                        eChookBuffer.Offset = eChookBuffer.BytesLeft;
+                        eChookBuffer.Offset = 0;                // no frame start in the buffer: discard the junk
                         done = true;
                     }
                     else
@@ -251,8 +252,8 @@ namespace Omni
                         }
                         while ((ix < eChookBuffer.BytesLeft) && (eChookBuffer.ReceivedBytes[ix] != '}')) ix++;
                         if (ix >= eChookBuffer.BytesLeft)
-                        {
-                            eChookBuffer.Offset = eChookBuffer.BytesLeft;
+                        {                                       // partial frame; if the buffer is full it can never complete, so discard it
+                            eChookBuffer.Offset = eChookBuffer.BytesLeft >= eChookBuffer.ReceivedBytes.Length ? 0 : eChookBuffer.BytesLeft;
                             done = true;
                         }
                         else

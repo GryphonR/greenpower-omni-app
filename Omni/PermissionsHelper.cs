@@ -34,6 +34,7 @@ namespace Omni
     {
         private static readonly string TAG = typeof(PermissionsHelper).FullName ?? "PermissionHelper";
 
+        private static bool permissionListsBuilt = false;
         private static MainActivity? mainActivity = null;
         private static Action? requestPermissionCallback = null;
         private static ActivityResultLauncher? requestPermissionLauncher = null;
@@ -84,18 +85,22 @@ namespace Omni
                     requestPermissionCallback?.Invoke();
                 }));
 
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.S)                // API level 31
+            if (!permissionListsBuilt)                                      // Init runs on every activity recreate; the static lists must only be extended once
             {
-                BluetoothPermissions.Add(Manifest.Permission.BluetoothConnect);
-            }
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)         // API level 33
-            {
-                NotificationPermissions.Add(Manifest.Permission.PostNotifications);
-            }
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.UpsideDownCake)   // API level 34
-            {
-                LocationPermissions.Add(Manifest.Permission.ForegroundServiceLocation);
-                miscellaneousPermissions.Add(Manifest.Permission.ForegroundServiceLocation);
+                permissionListsBuilt = true;
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.S)                // API level 31
+                {
+                    BluetoothPermissions.Add(Manifest.Permission.BluetoothConnect);
+                }
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)         // API level 33
+                {
+                    NotificationPermissions.Add(Manifest.Permission.PostNotifications);
+                }
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.UpsideDownCake)   // API level 34
+                {
+                    LocationPermissions.Add(Manifest.Permission.ForegroundServiceLocation);
+                    miscellaneousPermissions.Add(Manifest.Permission.ForegroundServiceLocation);
+                }
             }
 
             var allIMiscellaneousPermissionsGranted = CheckPermissions(miscellaneousPermissions);

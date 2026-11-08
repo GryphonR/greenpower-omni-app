@@ -31,10 +31,6 @@ namespace Omni
 
         string lastPermissionRequested = string.Empty;
 
-        public void OnCreatePreferences(Bundle? savedInstanceState, string? rootKey)
-        {
-            throw new NotImplementedException();
-        }
 
         public override View? OnCreateView(LayoutInflater? inflater, ViewGroup? container, Bundle? savedInstanceState)
         {

@@ -21,8 +21,9 @@ using Java.Lang;
 
 namespace Omni
 {
-    public class SettingsFragment : PreferenceFragmentCompat, IFragmentServiceUpdates, ISharedPreferencesOnSharedPreferenceChangeListener
+    public class SettingsFragment : PreferenceFragmentCompat, IFragmentServiceUpdates
     {
+        private EventHandler<EncryptedPreferenceChangedEventArgs>? preferenceChangedHandler;     // subscribed only while resumed
         private readonly int[] maskedPreferenceIntKeys = [  Resource.String.preference_key_upload_banchory_greenpower_password,
                                                             Resource.String.preference_key_upload_echook_live_data_password,
                                                             Resource.String.preference_key_upload_user_defined_password ];
@@ -32,7 +33,7 @@ namespace Omni
         {
             // Set custom data store which encrypts all strings
             PreferenceManager?.PreferenceDataStore = EncryptedPreferenceHelper.DataStore;
-            EncryptedPreferenceHelper.DataStore?.EncryptedPreferenceChanged += (s, e) => { OnSharedPreferenceChanged(e.SharedPreferences, e.Key); };
+            preferenceChangedHandler = (s, e) => { Activity?.RunOnUiThread(() => OnSharedPreferenceChanged(e.SharedPreferences, e.Key)); };   // changes can come from background threads
 
             // Build preferences screen from settings
             AddPreferencesFromResource(Resource.Xml.settings);
@@ -91,13 +92,13 @@ namespace Omni
         public override void OnResume()
         {
             base.OnResume();
-            PreferenceScreen?.SharedPreferences?.RegisterOnSharedPreferenceChangeListener(this);
+            if (preferenceChangedHandler != null) EncryptedPreferenceHelper.DataStore?.EncryptedPreferenceChanged += preferenceChangedHandler;
         }
 
         public override void OnPause()
         {
             base.OnPause();
-            PreferenceScreen?.SharedPreferences?.UnregisterOnSharedPreferenceChangeListener(this);
+            if (preferenceChangedHandler != null) EncryptedPreferenceHelper.DataStore?.EncryptedPreferenceChanged -= preferenceChangedHandler;
         }
 
         public void OnSharedPreferenceChanged(ISharedPreferences? sharedPreferences, string? changedPreference)

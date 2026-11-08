@@ -69,6 +69,7 @@ namespace Omni
 
         public void Start()
         {
+            if (IsStarted) return;
             Log.Info(TAG, "Upload sender start.");
             IsStarted = true;
 
@@ -118,7 +119,7 @@ namespace Omni
                 password = EncryptedPreferenceHelper.DataStore?.GetString(Resources?.GetString(Resource.String.preference_key_upload_user_defined_password), string.Empty);
             }
 
-            httpClient ??= new HttpClient();
+            httpClient ??= new HttpClient { Timeout = TimeSpan.FromSeconds(5) };    // short timeout so a slow server can't hold the upload gate for the 100s default
 
             // set the timer going
 
@@ -132,23 +133,12 @@ namespace Omni
             timer.Stop();
 
             IsStarted = false;
-
-            uploadGate.Wait();
-
-            try
-            {
-                httpClient?.Dispose();
-            }
-            finally
-            {
-                httpClient = null;
-                uploadGate.Release();
-            }
+            // httpClient is kept (not disposed) so Stop never blocks on an in-flight upload; Start reuses it
         }
 
-        public async Task UploadNowAsync()
+        public async Task UploadNowAsync(long timestamp)
         {
-            if (!uploadToNone) await UploadTelemetryDataAsync();
+            if (!uploadToNone) await UploadTelemetryDataAsync(true, timestamp);
         }
 
         private async void TimerElapsed(object? sender, ElapsedEventArgs? e)
@@ -202,12 +192,13 @@ namespace Omni
             return null;
         }
 
-        private async Task UploadTelemetryDataAsync()
+        private async Task UploadTelemetryDataAsync(bool waitForGate = false, long? timestamp = null)
         {
             if (Service.Resources == null) return;
 
-            if (!await uploadGate.WaitAsync(0)) return;     // try to set semaphore to proceed with upload request
-                                                            // if already set, previous upload request not complete, so return
+            // try to set semaphore to proceed with upload request; if already set, previous upload request not complete,
+            // so timed uploads skip, but a lap upload waits (bounded) so the lap timestamp isn't lost
+            if (!await uploadGate.WaitAsync(waitForGate ? TimeSpan.FromSeconds(10) : TimeSpan.Zero)) return;
             try
             {
                 var baseUrl = url;
@@ -253,7 +244,7 @@ namespace Omni
 
                 var data = new JSONObject();
 
-                data.Put("Timestamp", JavaSystem.CurrentTimeMillis());
+                data.Put("Timestamp", timestamp ?? JavaSystem.CurrentTimeMillis());
 
                 if (uploadToBanchoryGreenpower || uploadToUserDefined)
                 {
@@ -376,6 +367,10 @@ namespace Omni
                         Log.Info(TAG, "Upload telemetry data exception: " + ex.Message ?? "");
                     }
                 }
+            }
+            catch (System.Exception ex)                     // async void timer caller: an escaped exception here would kill the process
+            {
+                Log.Info(TAG, "Upload telemetry data exception building request: " + ex.Message);
             }
             finally
             {

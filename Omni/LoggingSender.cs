@@ -31,7 +31,8 @@ namespace Omni
         readonly Timer? Timer;                  // timer on which sender runs
 
         readonly string? LogFilePath;           // path to log file 
-        bool HeadersOutput;                     // true when CSV column headers have been output
+        string carName = "Car";                 // read once in Start (decrypting it for every CSV row is expensive)
+        bool HeadersOutput;                   // true when CSV column headers have been output
 
         readonly C[]? csv;                      // array containing definition of what goes in the CSV file
 
@@ -50,7 +51,7 @@ namespace Omni
 
                 HeadersOutput = false;
 
-                Timer = new Timer { Interval = Constants.LOGGING_INTERVAL, Enabled = false };
+                Timer = new Timer { Interval = Constants.LOGGING_INTERVAL, Enabled = false, AutoReset = false };   // restarted at end of each tick so ticks can't overlap
                 Timer.Elapsed += Timer_Elapsed;
 
                 // Define what's included in the CSV file
@@ -60,12 +61,7 @@ namespace Omni
                 new C("Timestamp",            (now, location) => { return (now - new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalMilliseconds.ToString("0.000", CultureInfo.InvariantCulture); }),
                 new C("DateTime (date)",      (now, location) => { return now.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture); }),
                 new C("DateTime (ms)",        (now, location) => { return now.ToLocalTime().ToString("fff", CultureInfo.InvariantCulture); }),
-                new C("Vehicle name",         (now, location) => { if (Service.Resources != null) 
-                                                                   { 
-                                                                        return EncryptedPreferenceHelper.DataStore?.GetString(Service.Resources.GetString(Resource.String.preference_key_car_name), "Car") ?? "Car"; 
-                                                                   } else { 
-                                                                        return "Car"; 
-                                                                   } }),
+                new C("Vehicle name",         (now, location) => carName),
                 new C("BluetoothConnected",   typeof(int),    Constants.SHARED_DATA_BLUETOOTH_CONNECTED_KEY, "0"),
                 new C("RaceTime (s)",         typeof(int),    Constants.SHARED_DATA_ELAPSED_TIME_KEY, "0"),
                 new C("Speed (m/s)",          typeof(double), Constants.SHARED_DATA_SPEED_KEY, "0.00"),
@@ -192,7 +188,8 @@ namespace Omni
         {
             Log.Info(TAG, "Logging sender start.");
             IsStarted = true;
-            var _ = Service;    // workaround to avoid "Private member 'LoggingSender.Service' can be removed as the value assigned to it is never read"
+            if (Service.Resources != null)
+                carName = EncryptedPreferenceHelper.DataStore?.GetString(Service.Resources.GetString(Resource.String.preference_key_car_name), "Car") ?? "Car";
             Timer?.Start();
         }
 
@@ -205,12 +202,23 @@ namespace Omni
 
         private  void Timer_Elapsed(object? sender, ElapsedEventArgs? e)
         {
-            if (!HeadersOutput)
+            try
             {
-                OutputHeaders();
-                HeadersOutput = true;
+                if (!HeadersOutput)
+                {
+                    OutputHeaders();
+                    HeadersOutput = true;
+                }
+                OutputValues();
             }
-            OutputValues();
+            catch (System.Exception ex)
+            {
+                Log.Info(TAG, $"Exception writing log row: {ex.Message}");
+            }
+            finally
+            {
+                if (IsStarted) Timer?.Start();
+            }
         }
 
     }

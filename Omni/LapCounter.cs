@@ -84,7 +84,6 @@ namespace Omni
 
         public int PositionUpdate(Location? location)
         {
-            Log.Info(TAG, "Lapcounter position update");
             if (location == null) return LapNumber();
             if (!location.HasAccuracy) return LapNumber();       // need to have accuracy in the location
 

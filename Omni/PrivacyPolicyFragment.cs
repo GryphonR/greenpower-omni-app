@@ -27,10 +27,6 @@ namespace Omni
             base.OnCreate(savedInstanceState);
         }
 
-        public void OnCreatePreferences(Bundle? savedInstanceState, string? rootKey)
-        {
-            throw new System.NotImplementedException();
-        }
 
         public override View? OnCreateView(LayoutInflater inflater, ViewGroup? container, Bundle? savedInstanceState)
         {

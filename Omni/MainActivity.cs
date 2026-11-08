@@ -313,9 +313,9 @@ namespace Omni
         {
             foreach (var fragment in SupportFragmentManager.Fragments)
             {
-                if ((fragment != null) && (fragment.IsVisible))
+                if (fragment is IFragmentServiceUpdates f && fragment.IsVisible)
                 {
-                    ((IFragmentServiceUpdates)fragment).OnDataReceived(Keys);
+                    f.OnDataReceived(Keys);
                 }
             }
         }
@@ -324,9 +324,9 @@ namespace Omni
         {
             foreach (var fragment in SupportFragmentManager.Fragments)
             {
-                if ((fragment != null) && (fragment.IsVisible))
+                if (fragment is IFragmentServiceUpdates f && fragment.IsVisible)
                 {
-                    ((IFragmentServiceUpdates)fragment).OnDataUploaded();
+                    f.OnDataUploaded();
                 }
             }
         }

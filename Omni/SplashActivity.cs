@@ -25,6 +25,7 @@ namespace Omni
         static readonly string TAG = typeof (SplashActivity).FullName ?? "SplashActivity";
 
         bool simulation = false;
+        bool launched = false;
 
         protected override void OnCreate(Bundle? savedInstanceState)
         {
@@ -56,6 +57,8 @@ namespace Omni
         protected override async void OnResume()
         {
             base.OnResume();
+            if (launched) return;                   // OnResume repeats while the delay runs; launch MainActivity only once
+            launched = true;
             await Task.Delay(Constants.SPLASH_SCREEN_INTERVAL);
             var intent = new Intent(Application.Context, typeof(MainActivity));
             intent.PutExtra(Constants.SIMULATION_NAME, simulation);
