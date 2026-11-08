@@ -146,9 +146,9 @@ namespace Omni
             }
         }
 
-        public async Task UploadNowAsync()
+        public async Task UploadNowAsync(long timestamp)
         {
-            if (!uploadToNone) await UploadTelemetryDataAsync();
+            if (!uploadToNone) await UploadTelemetryDataAsync(true, timestamp);
         }
 
         private async void TimerElapsed(object? sender, ElapsedEventArgs? e)
@@ -202,12 +202,13 @@ namespace Omni
             return null;
         }
 
-        private async Task UploadTelemetryDataAsync()
+        private async Task UploadTelemetryDataAsync(bool waitForGate = false, long? timestamp = null)
         {
             if (Service.Resources == null) return;
 
-            if (!await uploadGate.WaitAsync(0)) return;     // try to set semaphore to proceed with upload request
-                                                            // if already set, previous upload request not complete, so return
+            // try to set semaphore to proceed with upload request; if already set, previous upload request not complete,
+            // so timed uploads skip, but a lap upload waits (bounded) so the lap timestamp isn't lost
+            if (!await uploadGate.WaitAsync(waitForGate ? TimeSpan.FromSeconds(10) : TimeSpan.Zero)) return;
             try
             {
                 var baseUrl = url;
@@ -253,7 +254,7 @@ namespace Omni
 
                 var data = new JSONObject();
 
-                data.Put("Timestamp", JavaSystem.CurrentTimeMillis());
+                data.Put("Timestamp", timestamp ?? JavaSystem.CurrentTimeMillis());
 
                 if (uploadToBanchoryGreenpower || uploadToUserDefined)
                 {

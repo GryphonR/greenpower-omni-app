@@ -555,7 +555,7 @@ namespace Omni
                     keys.Add(Constants.SHARED_DATA_LAP_KEY);
                     if (lap != PreviousLap)                 // Force an immediate upload of data with timestamp of when lap incremented
                     {                                       // rather than wait for the next timed upload of data
-                        uploadSender?.UploadNowAsync();     // Conciously not awaiting the upload to complete
+                        _ = uploadSender?.UploadNowAsync(JavaSystem.CurrentTimeMillis());     // Conciously not awaiting the upload to complete
                         PreviousLap = lap;
                     }
                 }
