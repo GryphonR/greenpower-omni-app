@@ -21,12 +21,6 @@ namespace Omni
 {
     interface IFragmentServiceUpdates
     {
-        void OnCreatePreferences(Bundle? savedInstanceState, string? rootKey);
-
-        //void OnCreate(Bundle savedInstanceState);
-
-        View? OnCreateView(LayoutInflater inflater, ViewGroup? container, Bundle? savedInstanceState);
-
         public void OnDataReceived(List<string> Keys) { }
 
         public void OnDataUploaded() {  }

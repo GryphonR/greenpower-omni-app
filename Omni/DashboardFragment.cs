@@ -373,10 +373,6 @@ namespace Omni
             }
         }
 
-        public void OnCreatePreferences(Bundle? savedInstanceState, string? rootKey)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     class P

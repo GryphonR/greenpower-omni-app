@@ -23,10 +23,6 @@ namespace Omni
     {
         static readonly string TAG = typeof(DashboardFragment).FullName ?? "DashboardFragment";
 
-        public void OnCreatePreferences(Bundle? savedInstanceState, string? rootKey)
-        {
-            throw new NotImplementedException();
-        }
 
         public override View? OnCreateView(LayoutInflater inflater, ViewGroup? container, Bundle? savedInstanceState)
         {
