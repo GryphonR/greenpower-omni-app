@@ -593,6 +593,7 @@ namespace Omni
         {
             lapCounter.ResetLapNumber();
             var lap = lapCounter.PositionUpdate(null);
+            PreviousLap = lap;                      // so the reset itself doesn't trigger a lap upload
             Shared.Data.PutInt(Constants.SHARED_DATA_LAP_KEY, lap);
             this.ServiceBinder.DataAvailable([Constants.SHARED_DATA_LAP_KEY]);
         }
@@ -606,6 +607,7 @@ namespace Omni
                 case State.WaitingForThrottleOrCurrent:
                     lapCounter.Reset();
                     var lap = lapCounter.PositionUpdate(null);
+                    PreviousLap = lap;
                     Shared.Data.PutInt(Constants.SHARED_DATA_LAP_KEY, lap);
                     lapCounter.AcquireStartLocation();
                     break;
