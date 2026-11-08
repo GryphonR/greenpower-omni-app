@@ -101,12 +101,8 @@ namespace Omni
 
             simulation = intent.GetBooleanExtra(Constants.SIMULATION_NAME, false);
 
-            if (IsForegroundStarted)
-            {
-                Log.Info(TAG, "Foreground service already running");
-                return StartCommandResult.NotSticky;
-            }
-
+            // Runs again if already in the foreground: StartForeground is safe to repeat, picks up service types for permissions
+            // granted since the first call, and Start() below is idempotent so it starts any listener that couldn't start before.
             Log.Info(TAG, "Starting foreground service.");
 
             // Allow foreground service to be started whether or not have all the necessary permissions to allow simulation.

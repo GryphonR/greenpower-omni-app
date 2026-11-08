@@ -42,8 +42,7 @@ namespace Omni
         {
             Log.Info(TAG, "Starting bluetooth listener");
 
-            if (!BluetoothHelper.CheckBluetooth(Service)) return;           // return if bluetooth not enabled (should have been enabled in main activity)
-            if (IsStarted) return;                                          // return if already started
+            if (IsStarted) return;                                         // return if already started
 
             var Resources = Service.Resources;
             if (Resources is null) return;
