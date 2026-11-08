@@ -50,7 +50,7 @@ namespace Omni
 
                 HeadersOutput = false;
 
-                Timer = new Timer { Interval = Constants.LOGGING_INTERVAL, Enabled = false };
+                Timer = new Timer { Interval = Constants.LOGGING_INTERVAL, Enabled = false, AutoReset = false };   // restarted at end of each tick so ticks can't overlap
                 Timer.Elapsed += Timer_Elapsed;
 
                 // Define what's included in the CSV file
@@ -205,12 +205,23 @@ namespace Omni
 
         private  void Timer_Elapsed(object? sender, ElapsedEventArgs? e)
         {
-            if (!HeadersOutput)
+            try
             {
-                OutputHeaders();
-                HeadersOutput = true;
+                if (!HeadersOutput)
+                {
+                    OutputHeaders();
+                    HeadersOutput = true;
+                }
+                OutputValues();
             }
-            OutputValues();
+            catch (System.Exception ex)
+            {
+                Log.Info(TAG, $"Exception writing log row: {ex.Message}");
+            }
+            finally
+            {
+                if (IsStarted) Timer?.Start();
+            }
         }
 
     }
