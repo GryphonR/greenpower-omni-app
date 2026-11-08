@@ -134,7 +134,7 @@ namespace Omni
             }
             catch (Exception ex)
             {
-                Log.Info(TAG, "Exception starting in foreground" + ex.Message != null ? ": " + ex.Message : "");
+                Log.Info(TAG, $"Exception starting in foreground: {ex.Message}");
             }
 
             if (IsForegroundStarted) Start();
