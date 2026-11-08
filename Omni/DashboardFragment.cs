@@ -28,7 +28,7 @@ namespace Omni
 
         P[]? allViews;                               // details on all text views that may appear in the fragment
         Dictionary<int, P>? fragmentViews;           // details for just those text views that do appear in the fragment
-        Dictionary<string, P>? fragmentData;         // details by source of data for those text views that do appear in the fragment
+        Dictionary<string, List<P>>? fragmentData;        // details by source of data for those text views that do appear in the fragment
 
         Timer? timeOfDayTimer;
         WatchdogIndicator? bluetoothWatchdog;
@@ -118,14 +118,7 @@ namespace Omni
                 if (p != null && p.View != null)
                 {
                     fragmentViews.Add(p.ResourceId, p);
-                    try
-                    {
-                        if (p.SharedDataSourceKey != null) fragmentData.Add(p.SharedDataSourceKey, p);     // try to add, duplicate keys ignored!
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Log.Info(TAG, $"Exception in OnCreateView when adding text views: {ex}");
-                    }
+                    if (p.SharedDataSourceKey != null) AddFragmentData(p.SharedDataSourceKey, p);
                 }
             }
 
@@ -263,11 +256,17 @@ namespace Omni
         {
             foreach (var key in Keys)
             {
-                if (fragmentData == null || !fragmentData.ContainsKey(key))
-                    continue;
-                UpdateTextView(fragmentData[key]);
+                if (fragmentData != null && fragmentData.TryGetValue(key, out var views))
+                    foreach (var p in views) UpdateTextView(p);
             }
             if (Keys.Contains(Constants.SHARED_DATA_CURRENT_KEY)) bluetoothWatchdog?.Kick();
+        }
+
+        private void AddFragmentData(string key, P p)
+        {
+            if (fragmentData == null) return;
+            if (!fragmentData.TryGetValue(key, out var views)) fragmentData[key] = views = [];
+            views.Add(p);
         }
 
         public void OnDataUploaded()
@@ -354,10 +353,10 @@ namespace Omni
                                 // update shared data source key, multiplier, and format
                                 if (p.SharedDataSourceKey != null && !p.SharedDataSourceKey.Equals(option.SharedDataSourceKey))
                                 {
-                                    if (fragmentData.ContainsKey(p.SharedDataSourceKey))
+                                    if (fragmentData.TryGetValue(p.SharedDataSourceKey, out var oldViews) && oldViews.Remove(p))
                                     {
-                                        fragmentData.Remove(p.SharedDataSourceKey);
-                                        fragmentData.Add(option.SharedDataSourceKey, p);
+                                        if (oldViews.Count == 0) fragmentData.Remove(p.SharedDataSourceKey);
+                                        AddFragmentData(option.SharedDataSourceKey, p);
                                     }
                                     p.SharedDataSourceKey = option.SharedDataSourceKey;
                                 }
