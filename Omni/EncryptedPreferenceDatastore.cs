@@ -65,8 +65,10 @@ namespace Omni
             }
             catch (Exception ex)
             {
-                Log.Info(TAG, $"Exception decrypting value for key {key}, returning default value {defaultValue}: {ex}");
-                return defaultValue;
+                // shortcut: assumes an undecryptable value is legacy plaintext from a pre-encryption release; a version prefix on new ciphertext would make this exact
+                Log.Info(TAG, $"Could not decrypt value for key {key}, treating as legacy plaintext and migrating: {ex.Message}");
+                sharedPreferences?.Edit()?.PutString(key, EncryptionHelper.EncryptString(encryptedValue))?.Commit();
+                return encryptedValue;
             }
 
         }
